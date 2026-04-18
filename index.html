@@ -103,6 +103,15 @@
     .disclaimer { margin-top: 14px; font-size: 12px; color: var(--muted); line-height: 1.7; }
     .result-actions { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; }
 
+    .share-banner { padding: 18px 20px; border-radius: 16px; background: linear-gradient(135deg, #5d4a24, #8a6d3b); color: #fff; margin-bottom: 18px; display: none; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; box-shadow: 0 14px 32px rgba(60, 50, 30, 0.18); }
+    .share-banner.visible { display: flex; }
+    .share-banner-text { flex: 1 1 240px; font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.92); }
+    .share-banner-text strong { display: block; font-size: 16px; margin-bottom: 4px; color: #fff; }
+    .share-banner button { background: #fff; color: var(--accent-strong); padding: 12px 20px; border-radius: 12px; font-weight: 700; box-shadow: 0 10px 24px rgba(0,0,0,0.18); }
+
+    .toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); background: var(--accent-strong); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 1000; max-width: 80vw; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.2); }
+    .toast.visible { opacity: 1; }
+
     details.author-box { padding: 14px 18px; border: 1px dashed var(--line); border-radius: 14px; background: #fbf7ea; }
     details.author-box summary { cursor: pointer; font-weight: 600; color: var(--accent-strong); }
     details.author-box .author-content { margin-top: 10px; font-size: 14px; color: var(--muted); line-height: 1.8; }
@@ -164,6 +173,14 @@
       <div class="result-wrap card">
         <div class="result-layout">
 
+          <div class="share-banner" id="shareBanner">
+            <div class="share-banner-text">
+              <strong>🔗 这是一份分享的 TBTI 测试结果</strong>
+              看完下面的人格报告，要不要也测测你导是哪种物种？
+            </div>
+            <button id="joinTestBtn">我也来测测 →</button>
+          </div>
+
           <div class="type-box">
             <div class="poster no-image" id="posterBox"><span id="posterPlaceholder">海报加载中…</span><img id="posterImage" alt="" style="display:none;" /></div>
             <div class="type-kicker" id="resultModeKicker">你导的主人格</div>
@@ -197,12 +214,14 @@
         <div class="result-actions">
           <button id="restartBtn" class="btn-secondary">重新测一次</button>
           <button id="toTopBtn" class="btn-primary">回到首页</button>
+          <button id="shareBtn" class="btn-primary">分享给朋友</button>
           <button id="copyBtn" class="btn-secondary">复制结果文案</button>
         </div>
       </div>
     </section>
 
   </div>
+  <div class="toast" id="toast"></div>
 
   <script>
     const dimensionMeta = {
@@ -702,6 +721,8 @@
     function startTest(preview = false) {
       app.previewMode = preview;
       app.answers = {};
+      if (typeof setShareMode === 'function') setShareMode(false);
+      if (location.search) history.replaceState(null, '', location.pathname);
       const regular = shuffle(questions);
       const i1 = Math.floor(Math.random() * regular.length) + 1;
       const i2 = Math.floor(Math.random() * regular.length) + 1;
@@ -737,17 +758,111 @@
     });
     document.getElementById('submitBtn').addEventListener('click', renderResult);
     document.getElementById('restartBtn').addEventListener('click', () => startTest(app.previewMode));
-    document.getElementById('toTopBtn').addEventListener('click', () => showScreen('intro'));
+    document.getElementById('toTopBtn').addEventListener('click', () => {
+      if (location.search) history.replaceState(null, '', location.pathname);
+      setShareMode(false);
+      showScreen('intro');
+    });
     document.getElementById('copyBtn').addEventListener('click', () => {
       const r = window._lastResult;
       if (!r) return;
       const text = `我导测出来是 ${r.finalType.code}（${r.finalType.cn}）\n标语：${r.finalType.intro}\n${r.badge}\n——TBTI 测出来的，仅供娱乐。`;
       navigator.clipboard.writeText(text).then(() => {
-        alert('结果文案已复制，可粘贴到聊天/朋友圈。');
+        showToast('结果文案已复制，可粘贴到聊天/朋友圈。');
       }).catch(() => {
         alert('复制失败，请手动复制。');
       });
     });
+
+    // ---- Sharing ----
+    function encodeAnswers(answers) {
+      let s = '';
+      for (let i = 1; i <= 30; i++) s += (answers['q' + i] || 0);
+      s += (answers.egg_boss || 0);
+      s += (answers.egg_drunk || 0);
+      return s;
+    }
+
+    function decodeAnswers(s) {
+      if (!s || s.length !== 32 || !/^\d+$/.test(s)) return null;
+      const answers = {};
+      for (let i = 1; i <= 30; i++) {
+        const v = parseInt(s[i - 1], 10);
+        if (v < 1 || v > 3) return null;
+        answers['q' + i] = v;
+      }
+      const boss = parseInt(s[30], 10);
+      const drunk = parseInt(s[31], 10);
+      if (boss < 1 || boss > 4 || drunk < 1 || drunk > 4) return null;
+      answers.egg_boss = boss;
+      answers.egg_drunk = drunk;
+      return answers;
+    }
+
+    function buildShareUrl(answers) {
+      const base = location.origin + location.pathname;
+      return base + '?r=' + encodeAnswers(answers);
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('visible');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('visible'), 2200);
+    }
+
+    function setShareMode(on) {
+      const banner = document.getElementById('shareBanner');
+      const shareBtn = document.getElementById('shareBtn');
+      const restartBtn = document.getElementById('restartBtn');
+      const copyBtn = document.getElementById('copyBtn');
+      banner.classList.toggle('visible', on);
+      // On share-landing, hide redundant/confusing buttons
+      shareBtn.style.display = on ? 'none' : '';
+      restartBtn.style.display = on ? 'none' : '';
+      copyBtn.style.display = on ? 'none' : '';
+    }
+
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const url = buildShareUrl(app.answers);
+      const r = window._lastResult;
+      const text = r
+        ? `我导的 TBTI 测出来是 ${r.finalType.code}（${r.finalType.cn}）\n"${r.finalType.intro}"\n点开看完整报告，顺便测测你导：\n${url}`
+        : url;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('分享链接已复制，直接粘贴到聊天即可。');
+      }).catch(() => {
+        prompt('复制失败，请手动复制：', url);
+      });
+    });
+
+    document.getElementById('joinTestBtn').addEventListener('click', () => {
+      history.replaceState(null, '', location.pathname);
+      setShareMode(false);
+      app.answers = {};
+      showScreen('intro');
+    });
+
+    function tryLoadFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const raw = params.get('r');
+      if (!raw) return false;
+      const decoded = decodeAnswers(raw);
+      if (!decoded) {
+        showToast('分享链接不完整或已失效');
+        history.replaceState(null, '', location.pathname);
+        return false;
+      }
+      app.answers = decoded;
+      app.previewMode = false;
+      setShareMode(true);
+      renderResult();
+      return true;
+    }
+
+    tryLoadFromUrl();
   </script>
 </body>
 </html>
