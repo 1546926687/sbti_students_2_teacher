@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TBTI · 你导到底是个什么东西</title>
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --panel: #ffffff;
+      --text: #1f2420;
+      --muted: #6a6a68;
+      --line: #e3ddd0;
+      --soft: #f1ece0;
+      --accent: #8a6d3b;
+      --accent-strong: #5d4a24;
+      --danger: #a8431f;
+      --shadow: 0 16px 40px rgba(60, 50, 30, 0.08);
+      --radius: 22px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at top left, #fbf9f3 0, #f7f5f0 36%, #f3efe4 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .shell { max-width: 980px; margin: 0 auto; padding: 24px 16px 56px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    .hero { padding: 42px 28px; margin-top: 20px; text-align: center; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--accent-strong);
+      border: 1px solid var(--line); background: var(--soft);
+      border-radius: 999px; padding: 8px 12px; margin-bottom: 18px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    .hero h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.1; letter-spacing: -0.03em; }
+    .hero .sub { margin-top: 16px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+    .hero-actions { display: flex; justify-content: center; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+
+    button { border: 0; cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; font: inherit; }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
+    .btn-primary { background: var(--accent-strong); color: #fff; padding: 14px 20px; border-radius: 14px; box-shadow: 0 12px 30px rgba(93, 74, 36, 0.18); font-weight: 700; }
+    .btn-secondary { background: #fff; color: var(--accent-strong); padding: 14px 20px; border-radius: 14px; border: 1px solid var(--line); font-weight: 700; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .test-wrap, .result-wrap { margin-top: 22px; padding: 22px; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+    .progress { flex: 1; min-width: 240px; height: 10px; background: #efe9dc; border-radius: 999px; overflow: hidden; position: relative; }
+    .progress > span { display: block; height: 100%; background: linear-gradient(90deg, #b4935a, #8a6d3b); width: 0; transition: width .3s ease; }
+    .progress-text { font-size: 13px; color: var(--muted); }
+
+    .question { padding: 18px; border: 1px solid var(--line); border-radius: 18px; margin-bottom: 14px; background: #fffdf8; }
+    .question-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .badge { background: var(--soft); color: var(--accent-strong); padding: 4px 10px; border-radius: 999px; font-weight: 600; }
+    .question-title { font-size: 16px; line-height: 1.7; margin-bottom: 12px; font-weight: 500; }
+    .options { display: flex; flex-direction: column; gap: 8px; }
+    .option { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: background .15s, border-color .15s; }
+    .option:hover { background: var(--soft); }
+    .option input { accent-color: var(--accent-strong); }
+    .option input:checked ~ * { }
+    .option:has(input:checked) { border-color: var(--accent-strong); background: #fdf8ec; }
+    .option-code { width: 22px; height: 22px; border-radius: 6px; background: var(--soft); color: var(--accent-strong); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+    .actions-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
+    .hint { font-size: 13px; color: var(--muted); }
+
+    /* result */
+    .result-layout { display: flex; flex-direction: column; gap: 16px; }
+    .type-box { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, #fffdf6, #f5eedc); text-align: center; }
+    .poster { width: min(320px, 70%); aspect-ratio: 1/1; margin: 0 auto 18px; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: #faf6ec; box-shadow: 0 10px 28px rgba(93, 74, 36, 0.12); }
+    .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .poster.no-image { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+    .type-kicker { font-size: 13px; color: var(--accent-strong); font-weight: 600; }
+    .type-name { font-size: clamp(26px, 4vw, 38px); font-weight: 800; margin-top: 6px; letter-spacing: -0.02em; }
+    .match { display: inline-block; margin-top: 10px; padding: 6px 12px; background: var(--soft); border-radius: 999px; font-size: 13px; color: var(--accent-strong); font-weight: 600; }
+    .type-sub { margin-top: 10px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .type-intro { margin-top: 14px; font-size: 17px; font-weight: 600; color: var(--accent-strong); }
+    .analysis-box, .dim-box, .note-box, .secondary-box { padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: #fffdf8; }
+    .analysis-box h3, .dim-box h3, .note-box h3, .secondary-box h3 { font-size: 15px; margin-bottom: 12px; color: var(--accent-strong); }
+    .analysis-box p { line-height: 1.85; font-size: 15px; }
+
+    .dim-list { display: flex; flex-direction: column; gap: 10px; }
+    .dim-item { padding: 10px 12px; border-radius: 10px; background: #faf6ec; }
+    .dim-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .dim-item-name { font-size: 14px; font-weight: 600; }
+    .dim-item-score { font-size: 12px; color: var(--muted); }
+    .bar { height: 8px; background: #eee5cf; border-radius: 999px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #c9a45d, #7e5f2c); }
+    .dim-item p { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+
+    .secondary-list { display: flex; gap: 10px; flex-wrap: wrap; }
+    .secondary-item { padding: 10px 14px; border-radius: 10px; background: var(--soft); font-size: 13px; color: var(--accent-strong); font-weight: 600; }
+
+    .disclaimer { margin-top: 14px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+    .result-actions { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+    details.author-box { padding: 14px 18px; border: 1px dashed var(--line); border-radius: 14px; background: #fbf7ea; }
+    details.author-box summary { cursor: pointer; font-weight: 600; color: var(--accent-strong); }
+    details.author-box .author-content { margin-top: 10px; font-size: 14px; color: var(--muted); line-height: 1.8; }
+
+    @media (max-width: 600px) {
+      .hero { padding: 32px 20px; }
+      .question-title { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+
+    <section id="intro" class="screen active">
+      <div class="hero card">
+        <div class="eyebrow">📚 TBTI · Teacher Bull Type Indicator</div>
+        <h1>测测你导<br />到底是个什么东西</h1>
+        <p class="sub">
+          30 道离谱到骨子里的情景题，覆盖指导风格、学术压力、情绪沟通、资源支持、边界感五大模型。<br/>
+          最后给你一张你导的人格画像，外加十五维度吐槽式解读。<br/>
+          仅供娱乐，禁止用于举报、考核、撕逼、挂人、相亲或朝九晚五以外的任何严肃用途。
+        </p>
+        <div class="hero-actions">
+          <button id="startBtn" class="btn-primary">开始揭底</button>
+          <button id="startPreviewBtn" class="btn-secondary">显示维度作答</button>
+        </div>
+        <details class="author-box" style="margin-top: 28px; text-align: left;">
+          <summary>免责声明 · 请务必展开</summary>
+          <div class="author-content">
+            <p>1. 本测试是玩的，不是真的。人格画像均为恶搞性人设，不构成任何真实评价。</p>
+            <p>2. 严禁把结果页发到导师群、举报信、实名社交媒体或任何可能给你带来麻烦的场合。</p>
+            <p>3. 如果你导真的很糟糕，请走正规渠道（学院信箱、研工部、12355），不要指望一个网页帮你解决问题。</p>
+            <p>4. 如果你导其实挺好的，请在这里获得一次小小的快乐之后，回去好好做实验。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section id="test" class="screen">
+      <div class="test-wrap card">
+        <div class="topbar">
+          <button id="backIntroBtn" class="btn-secondary" style="padding: 8px 14px; font-size: 13px;">← 返回首页</button>
+          <div class="progress"><span id="progressBar"></span></div>
+          <div class="progress-text" id="progressText">0 / 32</div>
+        </div>
+        <div id="questionList"></div>
+        <div class="actions-bottom">
+          <div class="hint" id="testHint">请作答当前题目。</div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button id="prevBtn" class="btn-secondary" disabled>上一题</button>
+            <button id="nextBtn" class="btn-primary" disabled>下一题</button>
+            <button id="submitBtn" class="btn-primary" disabled style="display:none;">提交并查看结果</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result" class="screen">
+      <div class="result-wrap card">
+        <div class="result-layout">
+
+          <div class="type-box">
+            <div class="poster no-image" id="posterBox"><span id="posterPlaceholder">海报加载中…</span><img id="posterImage" alt="" style="display:none;" /></div>
+            <div class="type-kicker" id="resultModeKicker">你导的主人格</div>
+            <div class="type-name" id="resultTypeName">—</div>
+            <div class="match" id="matchBadge">—</div>
+            <div class="type-intro" id="resultIntro">—</div>
+            <div class="type-sub" id="resultTypeSub">—</div>
+          </div>
+
+          <div class="analysis-box">
+            <h3>📖 该人格的离谱解读</h3>
+            <p id="resultDesc"></p>
+          </div>
+
+          <div class="secondary-box">
+            <h3>🎭 你导身上可能还叠加了</h3>
+            <div class="secondary-list" id="secondaryList"></div>
+          </div>
+
+          <div class="dim-box">
+            <h3>📊 十五维度评分</h3>
+            <div id="dimList" class="dim-list"></div>
+          </div>
+
+          <div class="note-box">
+            <h3>⚠️ 友情提示</h3>
+            <p id="funNote" style="font-size: 14px; line-height: 1.8; color: var(--muted);"></p>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="restartBtn" class="btn-secondary">重新测一次</button>
+          <button id="toTopBtn" class="btn-primary">回到首页</button>
+          <button id="copyBtn" class="btn-secondary">复制结果文案</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const dimensionMeta = {
+      G1:  { name: 'G1 方向明确度',  model: '指导风格' },
+      G2:  { name: 'G2 微操颗粒度',  model: '指导风格' },
+      G3:  { name: 'G3 反馈及时度',  model: '指导风格' },
+      P1:  { name: 'P1 工作强度期望', model: '学术压力' },
+      P2:  { name: 'P2 产出 KPI',    model: '学术压力' },
+      P3:  { name: 'P3 节假日侵占',  model: '学术压力' },
+      M1:  { name: 'M1 情绪稳定度',  model: '情绪与沟通' },
+      M2:  { name: 'M2 批评温和度',  model: '情绪与沟通' },
+      M3:  { name: 'M3 可接近性',    model: '情绪与沟通' },
+      R1:  { name: 'R1 经费大方度',  model: '资源与支持' },
+      R2:  { name: 'R2 机会与推荐',  model: '资源与支持' },
+      R3:  { name: 'R3 人脉引入',    model: '资源与支持' },
+      B1:  { name: 'B1 不侵占私时',  model: '边界感' },
+      B2:  { name: 'B2 不打杂',      model: '边界感' },
+      B3:  { name: 'B3 人格尊重',    model: '边界感' }
+    };
+    const dimensionOrder = ['G1','G2','G3','P1','P2','P3','M1','M2','M3','R1','R2','R3','B1','B2','B3'];
+
+    const questions = [
+      { id:'q1',  dim:'G1', text:'你问导师「接下来研究方向是什么？」他的反应是？', options:[
+        {label:'甩给你一篇 2009 年的文献：「自己悟」', value:1},
+        {label:'模糊地说「往这个方向看看」', value:2},
+        {label:'掏出一份按季度排好的 roadmap', value:3} ]},
+      { id:'q2',  dim:'G1', text:'新生入组第一周，你导做了什么？', options:[
+        {label:'「随便看看论文，有想法告诉我」然后没下文了', value:1},
+        {label:'让师兄师姐带一带，有空再聊', value:2},
+        {label:'一对一给你定了三个月计划', value:3} ]},
+      { id:'q3',  dim:'G2', text:'论文初稿发给导师，他返回的批注是？', options:[
+        {label:'「整体还行，继续改」', value:1},
+        {label:'几处关键意见，其他让你自己把握', value:2},
+        {label:'连图注字体、括号半角全角都帮你改好', value:3} ]},
+      { id:'q4',  dim:'G2', text:'你写代码提交到课题组仓库，导师会？', options:[
+        {label:'他不看代码，也看不懂', value:1},
+        {label:'看结果，不看过程', value:2},
+        {label:'review 每一行，连变量命名都要改成他的口味', value:3} ]},
+      { id:'q5',  dim:'G3', text:'周三晚上发邮件给导师，最可能什么时候回？', options:[
+        {label:'一周后，或者等你当面找他', value:1},
+        {label:'第二天白天', value:2},
+        {label:'十分钟内，凌晨三点也能秒回', value:3} ]},
+      { id:'q6',  dim:'G3', text:'组会后你找导师讨论一个问题，他会？', options:[
+        {label:'「先这样吧，我后面再想想」然后再也不提', value:1},
+        {label:'约个时间下周聊', value:2},
+        {label:'当场拉你进办公室聊两小时', value:3} ]},
+      { id:'q7',  dim:'P1', text:'你导默认的「正常工作时长」是？', options:[
+        {label:'做完事就走，从不看时间', value:1},
+        {label:'朝九晚六，周末休息', value:2},
+        {label:'7×12 起步，周末默认在实验室', value:3} ]},
+      { id:'q8',  dim:'P1', text:'课题组里「摸鱼」被导师发现的后果？', options:[
+        {label:'他自己摸得比你还狠', value:1},
+        {label:'提醒一句，不至于翻脸', value:2},
+        {label:'当场开会批斗，顺便延毕警告', value:3} ]},
+      { id:'q9',  dim:'P2', text:'你导对学生毕业产出的期望？', options:[
+        {label:'能毕业就行，不强求论文', value:1},
+        {label:'一两篇普通期刊够了', value:2},
+        {label:'不发顶刊别想答辩', value:3} ]},
+      { id:'q10', dim:'P2', text:'每次组会你导关心的第一件事是？', options:[
+        {label:'「最近在看什么书？」', value:1},
+        {label:'「进展怎么样？」', value:2},
+        {label:'「这周的数据呢？论文写了几页？」', value:3} ]},
+      { id:'q11', dim:'P3', text:'春节放假，导师的消息是？', options:[
+        {label:'「好好陪家人，别看文献」', value:1},
+        {label:'「顺便想想课题就行」', value:2},
+        {label:'「在家也能跑实验吧？大年初三组会」', value:3} ]},
+      { id:'q12', dim:'P3', text:'国庆长假前，导师的表态？', options:[
+        {label:'主动让大家早点放', value:1},
+        {label:'默认大家会休，但没明说', value:2},
+        {label:'「假期是弯道超车的机会」', value:3} ]},
+      { id:'q13', dim:'M1', text:'你导发火的频率？', options:[
+        {label:'阴晴不定，一天三变', value:1},
+        {label:'偶尔发火，事出有因', value:2},
+        {label:'几乎没见他情绪波动', value:3} ]},
+      { id:'q14', dim:'M1', text:'你交了一份烂报告，导师的第一反应？', options:[
+        {label:'当场摔文件，骂到你怀疑人生', value:1},
+        {label:'黑脸但不失控，让你回去改', value:2},
+        {label:'淡定指出问题，顺便帮你分析', value:3} ]},
+      { id:'q15', dim:'M2', text:'组会上你讲错一个概念，导师会？', options:[
+        {label:'「这都能说错？你是不是没读书？」', value:1},
+        {label:'直接打断纠正，语气有点冲', value:2},
+        {label:'「这里有个小误解，我们一起看下」', value:3} ]},
+      { id:'q16', dim:'M2', text:'你的论文被拒稿，导师的反应？', options:[
+        {label:'「你搞的什么破玩意」——当众', value:1},
+        {label:'先吐槽再安慰', value:2},
+        {label:'「审稿人也有眼瞎的时候，换个期刊」', value:3} ]},
+      { id:'q17', dim:'M3', text:'你想找导师聊一个困惑，流程是？', options:[
+        {label:'挂号 → 等一周 → 临时取消', value:1},
+        {label:'提前约时间，基本能约到', value:2},
+        {label:'敲门就能进，随时聊', value:3} ]},
+      { id:'q18', dim:'M3', text:'你半夜被科研搞崩想找导师倾诉，你会？', options:[
+        {label:'想都不敢想，他是另一种生物', value:1},
+        {label:'发邮件，等他白天回', value:2},
+        {label:'直接发消息，他可能真能陪你聊', value:3} ]},
+      { id:'q19', dim:'R1', text:'你想买一台 8000 块的设备，导师的反应？', options:[
+        {label:'「能不能用旧的？报销都难批」', value:1},
+        {label:'「写个申请，我看看」', value:2},
+        {label:'「直接买，刷卡告诉我」', value:3} ]},
+      { id:'q20', dim:'R1', text:'实验组的打印纸和文具……？', options:[
+        {label:'自备，报销？不存在的', value:1},
+        {label:'公共的，省着用', value:2},
+        {label:'管够，坏了随时换', value:3} ]},
+      { id:'q21', dim:'R2', text:'有个国际会议名额，导师怎么分？', options:[
+        {label:'只有嫡系大师兄能去', value:1},
+        {label:'按项目相关度分', value:2},
+        {label:'让大家抢，主动争取就给', value:3} ]},
+      { id:'q22', dim:'R2', text:'你想申请出国交流，导师的态度？', options:[
+        {label:'「别想了，先把手头的做完」', value:1},
+        {label:'「可以，但别耽误进度」', value:2},
+        {label:'主动帮你推荐联系对方', value:3} ]},
+      { id:'q23', dim:'R3', text:'学术大牛来访问，导师会？', options:[
+        {label:'单独接待，学生莫挨', value:1},
+        {label:'让学生旁听，不介绍', value:2},
+        {label:'挨个介绍：「这是我学生，正在做 XX」', value:3} ]},
+      { id:'q24', dim:'R3', text:'你参加学术会议，导师会？', options:[
+        {label:'让你自己 social', value:1},
+        {label:'临行前嘱咐几句', value:2},
+        {label:'亲自拉你认识同行，甚至发朋友圈推荐', value:3} ]},
+      { id:'q25', dim:'B1', text:'周日晚上 10 点，你导最可能做什么？', options:[
+        {label:'群里 @ 全体：「我刚想到一个 idea，今晚讨论」', value:1},
+        {label:'偶尔发一条非紧急消息', value:2},
+        {label:'从不在非工作时间打扰', value:3} ]},
+      { id:'q26', dim:'B1', text:'你给导师发消息后，最常见的心情？', options:[
+        {label:'瑟瑟发抖，怕随时被叫去加班', value:1},
+        {label:'看情况，多数时候不慌', value:2},
+        {label:'很放松，他基本不会夺命连环 call', value:3} ]},
+      { id:'q27', dim:'B2', text:'你导让你做过的「非科研活动」里最离谱的是？', options:[
+        {label:'接孩子 / 做饭 / 陪酒 / 跑报销', value:1},
+        {label:'帮他改个 PPT / 写封邮件', value:2},
+        {label:'没有，只谈学术', value:3} ]},
+      { id:'q28', dim:'B2', text:'你导家里/项目的杂事，学生参与度？', options:[
+        {label:'基本等于他的私人助理', value:1},
+        {label:'偶尔帮忙，不算过分', value:2},
+        {label:'完全不涉及', value:3} ]},
+      { id:'q29', dim:'B3', text:'当众被导师批评的场景？', options:[
+        {label:'「你是我带过最蠢的」——在整个组会面前', value:1},
+        {label:'偶尔语气重，但不人身攻击', value:2},
+        {label:'从不当众让学生难堪', value:3} ]},
+      { id:'q30', dim:'B3', text:'你的想法和导师冲突时，他会？', options:[
+        {label:'「闭嘴，听我的」', value:1},
+        {label:'「你试试，不行再听我的」', value:2},
+        {label:'「说说你的理由，我们讨论」', value:3} ]}
+    ];
+
+    const specialQuestions = [
+      { id:'egg_boss', special:true, kind:'boss_trigger',
+        text:'你导让你做过以下哪种事？选最离谱的那项：', options:[
+        {label:'纯科研，没干过别的', value:1},
+        {label:'帮忙改 PPT、写邮件', value:2},
+        {label:'报销跑腿、订机票', value:3},
+        {label:'接送孩子 / 做饭 / 陪酒 / 处理私事', value:4} ]},
+      { id:'egg_drunk', special:true, kind:'drunk_trigger',
+        text:'你导朋友圈最常出现什么？', options:[
+        {label:'课题组成果', value:1},
+        {label:'学术会议合影', value:2},
+        {label:'养生 / 书法 / 读书笔记', value:3},
+        {label:'酒局干杯 / 成功学语录 / 半夜三点的夜宵', value:4} ]}
+    ];
+
+    const TYPE_LIBRARY = {
+      "GOD":    { code:"GOD",    cn:"学术菩萨",  intro:"你发不发论文都行，健康就好。",
+        desc:"恭喜你，测出了全中国不足 0.3% 的珍稀物种——学术菩萨本尊。GOD 人格的精神内核可以用一句话概括：阿弥陀佛，顺其自然。他不催你、不骂你、不查你考勤、不盯你产出，甚至在你发完一篇水刊庆祝时还会真心说一句「不错」。他的经费从来管够，设备坏了就换，你想出国他一句废话没有就给你签字。但硬币的另一面是——你也别指望他给你指啥具体方向。问他下一步怎么做？他慈眉善目：「你想做啥就做啥。」问他这个 idea 靠不靠谱？他微微一笑：「你自己判断。」跟了 GOD 的学生，要么三年修成独立科研人格，要么三年修成真佛。请珍惜你的菩萨，全世界都在卷的时代，能遇到一个愿意让你慢慢长的人，已经是积了八辈子的德。" },
+      "CTRL+":  { code:"CTRL+",  cn:"微操狂魔",  intro:"这个逗号，我建议改成分号。",
+        desc:"CTRL+ 人格不是在指导你，是在用你这具肉身练习一种名为「精细控制」的玄学武功。你写论文？他改标点。你做 PPT？他改字号。你跑代码？他 review 每一个变量命名，并坚持 userName 必须写成 user_name，理由是「我就喜欢下划线」。你以为你在读研？不，你在参加一场为期三年的二人表演艺术，主角是他，你是他的提线木偶兼键盘。CTRL+ 的方向感其实很明确，反馈也极快——快到你刚点发送，批注就到了。唯一的问题是：他改完的东西，已经不算你写的了。毕业答辩那天，你看着 PPT 上每一页的脚注字体都一致为「宋体 10.5 小四」，眼泪不争气地流了下来。这就是完美，这就是控制，这就是 CTRL+ 的美学，你学到的不是科研，是设计规范。" },
+      "GHOST":  { code:"GHOST",  cn:"失联导师",  intro:"老师？老师在吗？……",
+        desc:"GHOST 人格最大的特征，是你入组两年了，还能在走廊里把他认错成隔壁组的。他的存在形态介于薛定谔的猫和量子纠缠之间——你不观测他，他就不存在；你观测他，他还是不存在。邮件石沉大海，微信已读不回，办公室常年黑灯瞎火，唯一能证明他还活着的证据是：每到毕业答辩前一周，他会突然冒出来问你一句「你课题做完了吗？」你想哭，但没眼泪，因为你已经习惯了把自己当导师来带。好消息是，GHOST 很少骂你——他不骂你因为他不记得你。坏消息是，你以为你在读研，其实你在独自创业，资金不足，无人指导，产品上线还要打回去自己改。遇到 GHOST，请给自己报一个「自我驱动力特训班」，三年以后你不是博士，是创业者。" },
+      "KPI-R":  { code:"KPI-R",  cn:"指标机器",  intro:"下个月交不出数据，自己看着办。",
+        desc:"KPI-R 不是一个导师，是一台由论文数据驱动的精密工业机器。他的大脑里只有三个词：影响因子、一作、数量。他不关心你今天心情好不好，不关心你昨晚是不是通宵赶稿导致肾衰竭，甚至不关心你这个 idea 是不是真的有意义——他只关心这玩意能发到几区。你以为读研是探索未知？不，在 KPI-R 手下，读研是一条流水线，你是工人，论文是产品，你的青春是耗材。他每周要周报，每月要月报，每季度要三篇以上的进展汇报。好处是，只要你能产出，他基本不会为难你；坏处是，一旦你产不出，他的黑脸能让你在三天内学会所有情绪管理技巧。跟 KPI-R 读研，你会成为这个世界上最会写论文的人，也会成为最不想再写论文的人。" },
+      "PUA-R":  { code:"PUA-R",  cn:"精神污染源", intro:"你是我带过最差的一届。",
+        desc:"警告：PUA-R 人格已被多国列为精神污染性物种。他的核心技能是「言语塑形术」——通过持续、稳定、高强度的贬低，把一个原本还算自信的年轻人，雕刻成一个每晚都要靠刷短视频才能入睡的碎片化灵魂。他会当众骂你是废物，会在组会上点名你是全组拖后腿的人，会在你拒稿后说「我就知道你不行」。但是！只要你提出想换导师 / 退学 / 延毕，他立刻变成另一个人：「其实你挺有潜力的，再坚持一下。」这就是 PUA-R 的精髓——把你贬到谷底，再用一根头发丝拉你上来，让你以为他是救世主。经费少、机会少、尊重更少，唯一不少的是对你人格的 24 小时精准打击。温馨提示：跟了 PUA-R，请务必保留聊天记录，并请储备好心理咨询师电话。这已经不是读研，是渡劫。" },
+      "DAD":    { code:"DAD",    cn:"学术慈父",  intro:"钱不够花跟我说。",
+        desc:"DAD 人格是这个卷到失序的学术圈里，最后一批懂得「人」比「论文」重要的导师。他给经费大方，给机会大方，给鼓励更大方。你实验失败了，他拍拍你肩膀说「再来一次」；你生病了，他让你先回家休息；你失恋了，他甚至会尴尬地递给你一瓶可乐。他对你的期待合理、批评温和、从不让你当众难堪。他会在组会上讲他年轻时的糗事，让你发现原来导师也是人。唯一的小缺点是——DAD 的科研推进速度，有时候真的取决于你自己。他不会逼你，也就意味着你得学会逼自己。否则三年下来，你可能只收获了一个温暖的回忆，以及一篇勉强能毕业的论文。但说真的，在这个时代，能遇到一个把你当人而不是耗材的导师，已经是史诗级运气。请好好珍惜你的 DAD。" },
+      "PIE-R":  { code:"PIE-R",  cn:"画饼大王",  intro:"跟我三年，保你进 top。",
+        desc:"PIE-R 是一个行走的 PPT 生成器，他的大脑不是用来思考科研的，是用来生产愿景的。入组第一天，他会给你画一张饼：「跟我干，毕业去 MIT。」第二年，他会换一张饼：「这个项目做成了，你就是这个领域的未来。」第三年，饼还在，论文没了。PIE-R 的核心算法是：用未来的虚假繁荣，对冲现在的真实痛苦。他口才好、人脉看似广、愿景宏大，在他描述下你仿佛已经发了 Nature、拿了教职、出任了 CEO、迎娶了白富美。但现实是，他给你安排的每一个课题都充满戏剧性——充满戏剧性地烂尾。机会只给嫡系，经费卡得很紧，人脉从不引入学生。跟 PIE-R 读研，你的毕业论文多半会写成一部科幻小说。冷静点，朋友，饼是吃不饱的，你得自己去买饭。" },
+      "ZEN":    { code:"ZEN",    cn:"佛系禅师",  intro:"一切随缘，顺其自然。",
+        desc:"ZEN 人格已经达到了人类导师的精神顶点——他悟了。他不再追求论文、经费、项目、帽子，他追求的是内心的平静与一杯温热的枸杞茶。课题组的节奏是：你来，他点点头；你不来，他也点点头；你毕业，他写个签名；你退学，他叹口气说「也好」。ZEN 的办公室里永远飘着一种令人昏昏欲睡的檀香，你坐下想讨论一个急迫的 bug，他慢悠悠地给你倒了杯茶，然后说「先喝茶」。半小时后，你发现你忘了 bug 是啥。ZEN 不会骂你也不会夸你，他把一切都看作缘分。在他这里，007 是妄念，KPI 是执念，顶刊是虚妄。好处：你永远不会过劳死；坏处：你可能到毕业都没搞清楚自己在干嘛。但这也是一种修行。" },
+      "KING":   { code:"KING",   cn:"卷王领袖",  intro:"我 6 点到办公室，没看到你们。",
+        desc:"KING 人格是这片学术大陆上最让人又敬又怕的存在。他自己 5 点起床，6 点到办公室，晚上 11 点还在回邮件，周末默认要来实验室喝茶——注意，他是真的来喝茶，但他会顺便看看谁没来。KING 不会明确要求你 007，他只是用自己的身影默默地告诉你：我都这样了，你还好意思摸鱼？他的方向感极强，微操力极猛，反馈极快，一切都围绕着一个词转：效率。跟了 KING 读研，你三年能产出别人五年的成果，同时你的黑眼圈也会深到被误认为是轻度家暴。好处是，毕业时你的简历金光闪闪；坏处是，你会在 25 岁就学会养生，因为你的身体已经像 45 岁。KING 不是坏人，他甚至挺照顾学生，只是他对「正常」的定义，已经脱离了人类社会的平均水平。" },
+      "STORM":  { code:"STORM",  cn:"情绪风暴",  intro:"上午夸你天才，下午骂你废物。",
+        desc:"STORM 人格是导师界的薛定谔之猫——你永远不知道打开办公室门的那一刻，面对的是哪一个他。上午他可能心情大好，把你夸成当代爱因斯坦；下午同一份报告，他看到你就骂你拖后腿；晚上他又发微信说「其实你挺好的」。STORM 的内心世界就像一台坏掉的洗衣机，所有情绪随机旋转、互相缠绕、不定期脱水。和他共事最大的技能不是科研，是情绪气象预报：观察他今早停车有没有发火、中午吃的什么、是不是又跟另一个老师吵架了。你的论文写得好不好不重要，重要的是你递交它时他处于哪个相位。跟了 STORM，你不会成为科学家，但你一定会成为顶级的情绪分析师，微表情识别能力吊打 FBI。请为自己备好瑜伽垫和冥想 App。" },
+      "BANK":   { code:"BANK",   cn:"资源大户",  intro:"经费管够，别心疼。",
+        desc:"BANK 人格坐拥课题组财富密码，经费像黄河之水天上来。你想买设备？买。你想去开会？去。你想出国交流？机票他全报。他的朋友圈里全是院士、大佬、国际合作者，你跟他三年能见到的大牛比你前二十年加起来都多。但是——BANK 的资源不是白给的，他要的是「资源使用的回报率」。你得抢着用、卷着用、高效地用，因为你不用自有别人用。他的课题组规模通常很大，你可能只是里面的一颗螺丝钉，想找他谈话需要排队挂号。他不是不关心你，他只是关心的学生太多，照顾不过来。跟了 BANK，你不愁资源，愁的是怎么从十几个师兄师姐中间挤出存在感。这是一场以资源为武器的内部竞争，活下来的才能分蛋糕。" },
+      "MIA":    { code:"MIA",    cn:"神隐大师",  intro:"出差半年，回来问课题做完了吗。",
+        desc:"MIA 全称 Missing In Academia。他和 GHOST 的区别在于：GHOST 是根本不在，MIA 是他在但他不在学校。他永远在出差、开会、考察、合作、参加评审、做学术交流。他的行程表比特朗普还满。你想找他签字？等下个月。你想让他看看论文？他说「机场 Wi-Fi 不好，回来再看」，然后再也没回来。MIA 不微操——他想微操也够不着。他不催你、不骂你、不查你，但也不指导你。好消息：他的私人时间从不被侵占，因为他没有私人时间；坏消息：你的私人时间也不被侵占，因为你也没有指导。跟了 MIA，你会自动获得极强的独立科研能力，因为你别无选择。毕业那天，你终于见到了他，你激动地想拥抱，他淡淡地说：「你是哪位？」" },
+      "SHOW":   { code:"SHOW",   cn:"表演艺术家", intro:"组会比春晚还精彩。",
+        desc:"SHOW 人格深知一个道理：在学术圈，看起来牛逼比真的牛逼更重要。他的 PPT 模板是全组最精致的，他的组会开场像 TED 演讲，他的朋友圈每条都有 100+ 赞。外人看这个课题组，金光闪闪、欣欣向荣、未来可期。只有内部学生知道：我们实际在做什么？不知道，老板说啥是啥，但啥也没产出。SHOW 会花三周时间帮你打磨一份没什么数据的 PPT，只为在领导来访时惊艳全场。他的经费不少，人脉不少，机会也不少——但都花在表演上。跟了 SHOW，你会成为一个极强的汇报型选手，讲故事、画大饼、做可视化样样精通；但你的真实学术水平可能在同辈里处于中下游。好处是，你的简历看起来很漂亮，坏处是，你面试时一被追问技术细节就露馅。" },
+      "CLAW":   { code:"CLAW",   cn:"抢一作选手", intro:"我指导了你，一作应该是我。",
+        desc:"CLAW 人格深谙一个原理：学生的论文，也是老师的论文，所以到底是谁的论文？是老师的论文。他的逻辑链无懈可击：idea 是我提的（虽然你才实现的），方向是我定的（虽然你自己调的），经费是我出的（虽然学校发的），所以一作自然归我，你挂通讯候选，啊不，二作。你想反驳？他会语重心长地告诉你：「年轻人不要太计较，导师也要生存。」CLAW 的黑暗面在于，他通常有方向感、有微操、有 KPI 要求——这些都让你做得很辛苦，但摘果子的永远是他。组里的机会、推荐、人脉他都留给能给他带来价值的人，也就是产出多的人，也就是他摘果子摘得最爽的那个人。跟了 CLAW 读研，请务必记住：你的工作成果要及时备份、时间戳要截图、commit 要留记录。有些仗，迟早要打。" },
+      "MOM":    { code:"MOM",    cn:"学术妈妈",  intro:"吃了吗？最近瘦了。",
+        desc:"MOM 人格是导师界的最后一缕温柔。她（他）的办公室里永远备着零食，组会结束后会问大家「中午想吃啥」，你生病了她会真的带你去医院，你失恋了她会真诚地坐下听你哭半小时。MOM 关心你的身体、感情、家庭、未来、兴趣爱好，就是——有时候不太关心你的论文。她不是不催，只是催得很温柔：「最近是不是累了？要不这周末休息一下？」然后你就真的休息了，然后课题就搁置了，然后毕业延期了。但 MOM 的真诚是不可替代的。在卷王遍地的时代，有一个把你当孩子的人，本身就是一种治愈。她会在你答辩那天哭，会在你结婚时发红包，会在你工作五年后还记得你喜欢吃芒果。这不是导师，这是人生的运气。" },
+      "POLI":   { code:"POLI",   cn:"政客型",    intro:"人情世故满分，科研指导 0 分。",
+        desc:"POLI 人格是典型的学术政治家。他在学院里谁都认识、谁都能攀谈、谁都能给面子。他的头衔多到名片要写两面，他的酒局比组会多三倍。你想学科研？对不起，他真的没时间。你想学科研政治？恭喜你，跟着他三年你将成为青年政坛冉冉新星。POLI 不微操、情绪稳定、人脉广、机会也多——但他的机会是给能替他在学院里谋位置的学生，不是给只会闷头做实验的你。他会把你介绍给别的老师，让你替他「联络感情」；他会让你组织各种活动，理由是「这是锻炼」；他会在关键时刻帮你一把，但你也要准备好在他需要时站队。跟了 POLI，你不一定成为科学家，但你一定成为职场老油条。学术圈的生存技能从此对你不是秘密。" },
+      "TIGER":  { code:"TIGER",  cn:"老虎导师",  intro:"见面先骂，骂完请你吃饭。",
+        desc:"TIGER 人格是一种奇特的混合体：他是严厉的，也是热情的；是可怕的，也是可爱的。组会上他能把你骂到想原地蒸发，骂完下组会他立刻拉你去食堂：「走，老师请你吃饭。」你刚哭完的眼睛还肿着，他已经在那边笑呵呵地给你打菜。TIGER 的逻辑是：「骂你是为你好，请你吃饭是因为你是我学生。」这两者在他的大脑里是并行不悖的。他的方向明确、微操适中、产出要求高，但他真的关心你，会给你推荐信，会帮你争取机会，会在毕业时送你一瓶好酒。TIGER 的学生毕业后大多感情复杂——又恨又爱，又怕又想念。多年后想起读研时光，你会说：「那是我最痛苦的三年，也是我成长最快的三年。」老虎是会伤人，但也是真的护崽。" },
+      "NERD":   { code:"NERD",   cn:"纯技术宅",  intro:"只会说代码，不会说人话。",
+        desc:"NERD 人格是学术圈最稀有的一类——技术天花板，但完全不会做人。他能在你卡了三天的 bug 面前花 20 秒解决，他能徒手推导你看都看不懂的公式，他的代码优雅到可以装裱起来。但是！他说话像机器人，情商约等于零，社交场合会主动躲在角落看手机，组里来客人他会直接说「我先回去写代码了」。NERD 不会微操你，因为他觉得你的问题不值得他亲自动手；他不会骂你，因为他懒得骂；他也不会推荐你，因为他压根没有人脉。他给的指导非常硬核，纯技术层面无敌，但你想学学术圈生存术？不好意思，他自己都不会。跟了 NERD 读研，你的技术会突飞猛进，你的社交能力会退化到幼儿园水平。毕业找工作时，你会发现面试官不光看技术，你傻眼了。" },
+      "VAMP":   { code:"VAMP",   cn:"吸血鬼",    intro:"学生是燃料，我才是主角。",
+        desc:"VAMP 人格的本质是一种精致的利己主义：学生的存在价值，是为我服务。他的每一次指导都是为了榨取更多产出，他的每一次鼓励都是为了让你多干两小时，他的每一次「关心」都是为了让你别跑路。经费？抠。机会？留给自己。人脉？不带你见。机会永远是他的，锅永远是你的。VAMP 的微操程度中等但批评极狠，情绪阴晴不定但方向是明确的——明确地把你耗尽。他会让你做三个项目同时推进，其中两个最后挂他一作，剩下那个你也别想独享。他的课题组学生更换频率很高，因为扛不住的都跑了。跟了 VAMP 读研，请务必学会对自己好一点，准时吃饭、按时睡觉、备份聊天记录、保留原始数据。他吸的是血，你得留点给自己用。" },
+      "SALT":   { code:"SALT",   cn:"咸鱼导师",  intro:"我已经躺了，你也来吧。",
+        desc:"SALT 人格是学术圈的「非暴力不合作」代表。他已经彻底躺平了——不评职称、不申项目、不写论文、不追热点。他的办公室常年飘着泡面香味，他的电脑里装满了电视剧。你问他课题方向？他说「你看着办」。你问他毕业要求？他说「能毕业就行」。你问他要不要多发点论文？他说「发那么多干啥，累不累」。SALT 不侵占你的时间，不要求你加班，不让你打杂，也从不骂你——因为他懒得骂。他的经费不多，机会不多，但要求也不多。跟了 SALT 读研，你的心态会被他同化：最初你还焦虑，中期开始躺平，后期你已经和他一起看电视剧了。这三年过得像退休，毕业那天你才突然反应过来：我好像什么都没学到？但又好像学到了更重要的东西——怎么和生活讲和。" },
+      "WTF":    { code:"WTF",    cn:"玄学导师",  intro:"你这导师，没法归类。",
+        desc:"恭喜！你导的人格复杂程度已超出系统标准库的理解范围。经过 15 个维度的全方位扫描，系统得出的结论是：WTF。这不是数据库的错，是你的导师真的过于奇葩。他可能早上像 CTRL+，中午像 GOD，下午像 STORM，晚上又秒变 DAD。他的行为模式完全随机，没有规律可循，每次和他打交道都像开盲盒。跟了 WTF 读研，你不是在读博，是在做田野调查，研究对象就是你导师本人。请在毕业后认真把这三年写成一本人类学专著，学术价值极高。匹配度不高不代表你写得不准，只代表你导师已经跳出了三界外、不在五行中。对此，系统表示深深的羡慕。" },
+      "BOSS-X": { code:"BOSS-X", cn:"包工头",    intro:"周末来家里帮我看下孩子作业。",
+        desc:"检测到强烈的「非科研活动」信号——恭喜，你不是博士生，你是免费劳动力承包商。BOSS-X 人格认为，导师和学生的关系不是学术传承，是主仆契约。你进了他的组，就相当于签了一份隐形的全包服务合同：接送他孩子、给他家做饭、陪他应酬、替他报销、替他写个人总结、替他做家里的 PPT——甚至替他妈妈换 iPad 的膜。科研？科研是副业。你毕业那天，他的孩子叫你哥哥/姐姐，他的老婆记得你做的红烧肉的味道，你的论文？可能还没开始写。BOSS-X 往往也伴随着情绪差、经费抠、机会少三连击。建议处理方式：如果还来得及，跑。如果跑不掉了，请把每一次打杂都算成一份简历——三年下来你会发现自己是个全能管家，Offer 都是家政公司发的。" },
+      "DRUNK-P":{ code:"DRUNK-P",cn:"酒蒙子教授", intro:"喝了这杯，什么都好说。",
+        desc:"你导的血液酒精浓度，已稳定高于学术浓度。DRUNK-P 人格的世界观非常简单：能喝酒解决的问题，都不是问题；能喝酒解决的学生，都是好学生。他的朋友圈是大型酒局纪实现场，他的办公桌上永远有半瓶没喝完的茅台，他的组会经常从三点开到五点，然后顺势拉你去饭局——「小X，这个项目咱们边喝边聊。」DRUNK-P 的资源通常不少（酒局认识的人确实多），但他的指导风格取决于当天的宿醉程度。你想学术地讨论一个问题？对不起，他可能还在回味昨晚那杯五粮液。他带的学生分两种：一种是酒量过关的嫡系，一种是不会喝酒的边缘人。哪一种都不太幸福。温馨提示：跟了 DRUNK-P，请务必把肝当成比论文更重要的资产来保护。" }
+    };
+
+    const NORMAL_TYPES = [
+      { code:"GOD",    pattern:"LLM-LLH-HHH-MMM-HHH" },
+      { code:"CTRL+",  pattern:"HHH-HHM-MLM-MMM-MLM" },
+      { code:"GHOST",  pattern:"LLL-LLH-MMH-MML-HHH" },
+      { code:"KPI-R",  pattern:"HML-HHL-MMM-MMM-MHM" },
+      { code:"PUA-R",  pattern:"MHM-HHL-LLL-LLL-LML" },
+      { code:"DAD",    pattern:"HML-MMH-HHH-HHH-HHH" },
+      { code:"PIE-R",  pattern:"HLM-HHL-MMH-LLM-MML" },
+      { code:"ZEN",    pattern:"LLL-LLH-HHM-MMM-HMH" },
+      { code:"KING",   pattern:"HHH-HHL-MMM-HHM-LML" },
+      { code:"STORM",  pattern:"MMM-MMM-LLL-MMM-MMM" },
+      { code:"BANK",   pattern:"HMM-MML-MMH-HHH-MMH" },
+      { code:"MIA",    pattern:"LLL-LMH-MMM-MML-HHH" },
+      { code:"SHOW",   pattern:"MLM-HMM-HHH-MHH-MMM" },
+      { code:"CLAW",   pattern:"HHM-HHM-MML-HML-MHL" },
+      { code:"MOM",    pattern:"MMH-LLH-HHH-MMH-HHH" },
+      { code:"POLI",   pattern:"LMM-MMM-HMH-HHM-MMM" },
+      { code:"TIGER",  pattern:"HHM-HHM-LMM-MHH-MMH" },
+      { code:"NERD",   pattern:"HMH-MMM-HMM-MMM-HMM" },
+      { code:"VAMP",   pattern:"MHM-HHL-LLL-LLL-LLL" },
+      { code:"SALT",   pattern:"LLL-LLH-MMM-LMM-HHH" }
+    ];
+
+    const DIM_EXPLANATIONS = {
+      G1: { L:"方向基本靠你自己悟，导师约等于占卜师。", M:"偶尔给指引，多数时候你得自立门户。", H:"方向明确到按季度倒计时，走错一步都难。" },
+      G2: { L:"甩手掌柜，改完他也不看。", M:"重点地方管一下，其他放手。", H:"连标点符号都不放过，精度堪比显微镜。" },
+      G3: { L:"邮件已读不回是常态，人间蒸发大师。", M:"有事找他能找到，但不快。", H:"消息秒回，凌晨也能出现。" },
+      P1: { L:"做完事就走，宽松到令人羡慕。", M:"正常工时，不鼓励加班。", H:"默认 007，休息被视为背叛。" },
+      P2: { L:"能毕业就行，论文爱发不发。", M:"常规产出要求，不离谱。", H:"顶刊是下限，SCI 是起步。" },
+      P3: { L:"假期真放假，别找他他也不找你。", M:"假期偶尔来点小任务。", H:"「在家也能搞科研吧？」——假期是他手里的加时赛。" },
+      M1: { L:"情绪薛定谔，进办公室前先观气。", M:"偶尔发火，整体可控。", H:"心如止水，泰山崩于前也不变色。" },
+      M2: { L:"批评等于人身攻击，毫无底线。", M:"语气有时冲，但就事论事。", H:"批评温和，甚至会先夸后提建议。" },
+      M3: { L:"见他一次比上访还难。", M:"提前约能约到。", H:"敲门就能进，深夜也能聊。" },
+      R1: { L:"经费卡得死，打印纸都要省着用。", M:"按需申请，常规可批。", H:"想买就买，刷卡就完事。" },
+      R2: { L:"机会只给嫡系，你是边缘人。", M:"看项目分配，基本公平。", H:"主动帮你争取机会。" },
+      R3: { L:"从不带你见人，人脉在他手里私有化。", M:"偶尔让你旁听，不主动引荐。", H:"到处介绍，朋友圈安利都来。" },
+      B1: { L:"周末深夜随时 @，私人时间不存在。", M:"偶尔骚扰，多数时候尚可。", H:"从不在非工作时间打扰，界限感满分。" },
+      B2: { L:"打杂比做实验多，形同私人助理。", M:"偶尔帮点忙，勉强可接受。", H:"只谈学术，其他一概不麻烦你。" },
+      B3: { L:"当众开盒，羞辱为乐。", M:"偶尔语气重，但不人格否定。", H:"始终把学生当人，哪怕批评也留尊严。" }
+    };
+
+    const app = {
+      shuffledQuestions: [],
+      answers: {},
+      previewMode: false,
+      currentIndex: 0
+    };
+    const screens = {
+      intro:  document.getElementById('intro'),
+      test:   document.getElementById('test'),
+      result: document.getElementById('result')
+    };
+    const questionList = document.getElementById('questionList');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const submitBtn = document.getElementById('submitBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const testHint = document.getElementById('testHint');
+
+    function showScreen(name) {
+      Object.entries(screens).forEach(([k, el]) => el.classList.toggle('active', k === name));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function getMetaLabel(q) {
+      if (q.special) return '🎁 彩蛋题';
+      return app.previewMode ? dimensionMeta[q.dim].name : '维度已隐藏';
+    }
+
+    function renderCurrentQuestion() {
+      const total = app.shuffledQuestions.length;
+      if (app.currentIndex < 0) app.currentIndex = 0;
+      if (app.currentIndex >= total) app.currentIndex = total - 1;
+      const q = app.shuffledQuestions[app.currentIndex];
+      const index = app.currentIndex;
+      questionList.innerHTML = `
+        <article class="question">
+          <div class="question-meta">
+            <div class="badge">第 ${index + 1} / ${total} 题</div>
+            <div>${getMetaLabel(q)}</div>
+          </div>
+          <div class="question-title">${q.text}</div>
+          <div class="options">
+            ${q.options.map((opt, i) => {
+              const code = ['A','B','C','D'][i] || String(i+1);
+              const checked = app.answers[q.id] === opt.value ? 'checked' : '';
+              return `
+                <label class="option">
+                  <input type="radio" name="${q.id}" value="${opt.value}" ${checked} />
+                  <div class="option-code">${code}</div>
+                  <div>${opt.label}</div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </article>
+      `;
+      questionList.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.addEventListener('change', e => {
+          const { name, value } = e.target;
+          app.answers[name] = Number(value);
+          updateProgress();
+          const isLast = app.currentIndex === app.shuffledQuestions.length - 1;
+          if (!isLast) {
+            setTimeout(() => { app.currentIndex += 1; renderCurrentQuestion(); }, 180);
+          }
+        });
+      });
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const total = app.shuffledQuestions.length;
+      const done = app.shuffledQuestions.filter(q => app.answers[q.id] !== undefined).length;
+      const percent = total ? (done / total) * 100 : 0;
+      progressBar.style.width = percent + '%';
+      progressText.textContent = `${done} / ${total}`;
+      const complete = done === total && total > 0;
+      const currentQ = app.shuffledQuestions[app.currentIndex];
+      const currentAnswered = currentQ && app.answers[currentQ.id] !== undefined;
+      const isLast = app.currentIndex === total - 1;
+
+      prevBtn.disabled = app.currentIndex === 0;
+      if (isLast) {
+        nextBtn.style.display = 'none';
+        submitBtn.style.display = '';
+        submitBtn.disabled = !complete;
+      } else {
+        nextBtn.style.display = '';
+        submitBtn.style.display = 'none';
+        nextBtn.disabled = !currentAnswered;
+      }
+
+      if (!currentAnswered) {
+        testHint.textContent = '请先作答当前题目。';
+      } else if (!complete) {
+        testHint.textContent = '选完自动翻到下一题。可用「上一题」回看修改。';
+      } else {
+        testHint.textContent = '全部作答完毕，点提交揭晓你导真面目。';
+      }
+    }
+
+    function sumToLevel(score) {
+      if (score <= 3) return 'L';
+      if (score === 4) return 'M';
+      return 'H';
+    }
+    function levelNum(level) { return { L:1, M:2, H:3 }[level]; }
+    function parsePattern(pattern) { return pattern.replace(/-/g,'').split(''); }
+
+    function computeResult() {
+      const rawScores = {};
+      const levels = {};
+      dimensionOrder.forEach(dim => { rawScores[dim] = 0; });
+      questions.forEach(q => { rawScores[q.dim] += Number(app.answers[q.id] || 0); });
+      dimensionOrder.forEach(dim => { levels[dim] = sumToLevel(rawScores[dim]); });
+
+      const userVector = dimensionOrder.map(dim => levelNum(levels[dim]));
+      const ranked = NORMAL_TYPES.map(type => {
+        const vector = parsePattern(type.pattern).map(levelNum);
+        let distance = 0, exact = 0;
+        for (let i = 0; i < vector.length; i++) {
+          const diff = Math.abs(userVector[i] - vector[i]);
+          distance += diff;
+          if (diff === 0) exact += 1;
+        }
+        const similarity = Math.max(0, Math.round((1 - distance / 30) * 100));
+        return { ...type, ...TYPE_LIBRARY[type.code], distance, exact, similarity };
+      }).sort((a, b) => {
+        if (a.distance !== b.distance) return a.distance - b.distance;
+        if (b.exact !== a.exact) return b.exact - a.exact;
+        return b.similarity - a.similarity;
+      });
+
+      const bestNormal = ranked[0];
+      const bossTriggered  = app.answers['egg_boss']  === 4;
+      const drunkTriggered = app.answers['egg_drunk'] === 4;
+
+      let finalType, modeKicker, badge, sub, special = false;
+
+      if (bossTriggered) {
+        finalType  = TYPE_LIBRARY['BOSS-X'];
+        modeKicker = '🚨 隐藏人格强制触发';
+        badge      = '包工头信号已爆表';
+        sub        = '非科研活动强度异常，系统已直接跳过常规人格判定。';
+        special    = true;
+      } else if (drunkTriggered) {
+        finalType  = TYPE_LIBRARY['DRUNK-P'];
+        modeKicker = '🍷 隐藏人格强制触发';
+        badge      = '乙醇亲和度过高';
+        sub        = '朋友圈酒精浓度已超出学术浓度，系统直接判定。';
+        special    = true;
+      } else if (bestNormal.similarity < 60) {
+        finalType  = TYPE_LIBRARY['WTF'];
+        modeKicker = '🌀 系统强制兜底';
+        badge      = `标准人格库最高匹配仅 ${bestNormal.similarity}%`;
+        sub        = '你导的行为模式超出了标准 20 类人格的覆盖范围，只能归入玄学。';
+        special    = true;
+      } else {
+        finalType  = { ...bestNormal };
+        modeKicker = '你导的主人格';
+        badge      = `匹配度 ${bestNormal.similarity}% · 精准命中 ${bestNormal.exact}/15 维`;
+        sub        = '维度命中度较高，当前结果可视为你导的主要画像。';
+      }
+
+      return { rawScores, levels, ranked, bestNormal, finalType, modeKicker, badge, sub, special };
+    }
+
+    function renderDimList(result) {
+      const dimList = document.getElementById('dimList');
+      dimList.innerHTML = dimensionOrder.map(dim => {
+        const level = result.levels[dim];
+        const raw   = result.rawScores[dim];
+        const pct   = Math.round(((raw - 2) / 4) * 100);
+        const explanation = DIM_EXPLANATIONS[dim][level];
+        return `
+          <div class="dim-item">
+            <div class="dim-item-top">
+              <div class="dim-item-name">${dimensionMeta[dim].name} <span style="color:var(--muted); font-weight:400;">· ${dimensionMeta[dim].model}</span></div>
+              <div class="dim-item-score">${level} / ${raw}分</div>
+            </div>
+            <div class="bar"><span style="width:${pct}%"></span></div>
+            <p>${explanation}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSecondary(result) {
+      const list = document.getElementById('secondaryList');
+      const pool = result.ranked
+        .filter(r => r.code !== result.finalType.code)
+        .slice(0, 3);
+      list.innerHTML = pool.map(t => `
+        <div class="secondary-item">${t.code}（${TYPE_LIBRARY[t.code].cn}） · ${t.similarity}%</div>
+      `).join('');
+    }
+
+    function renderResult() {
+      const result = computeResult();
+      const type = result.finalType;
+      document.getElementById('resultModeKicker').textContent = result.modeKicker;
+      document.getElementById('resultTypeName').textContent   = `${type.code}（${type.cn}）`;
+      document.getElementById('matchBadge').textContent       = result.badge;
+      document.getElementById('resultTypeSub').textContent    = result.sub;
+      document.getElementById('resultIntro').textContent      = type.intro;
+      document.getElementById('resultDesc').textContent       = type.desc;
+
+      const posterBox = document.getElementById('posterBox');
+      const posterImage = document.getElementById('posterImage');
+      const posterPlaceholder = document.getElementById('posterPlaceholder');
+      const src = `images/${encodeURIComponent(type.code)}.png`;
+      posterImage.onload = () => {
+        posterBox.classList.remove('no-image');
+        posterImage.style.display = 'block';
+        posterPlaceholder.style.display = 'none';
+      };
+      posterImage.onerror = () => {
+        posterBox.classList.add('no-image');
+        posterImage.style.display = 'none';
+        posterPlaceholder.style.display = '';
+        posterPlaceholder.textContent = `${type.code} 暂无海报`;
+      };
+      posterImage.alt = `${type.code}（${type.cn}）`;
+      posterImage.src = src;
+      document.getElementById('funNote').textContent = result.special
+        ? '本测试仅供娱乐。隐藏人格和玄学兜底属于彩蛋设计，请勿当真、更勿用于任何真实评价场合。'
+        : '本测试仅供娱乐，别拿它当投诉依据、撕逼证据、举报材料或换导师理由。你可以笑，但别太当真。';
+      renderDimList(result);
+      renderSecondary(result);
+      showScreen('result');
+      window._lastResult = result;
+    }
+
+    function startTest(preview = false) {
+      app.previewMode = preview;
+      app.answers = {};
+      const regular = shuffle(questions);
+      const i1 = Math.floor(Math.random() * regular.length) + 1;
+      const i2 = Math.floor(Math.random() * regular.length) + 1;
+      const [lo, hi] = i1 < i2 ? [i1, i2] : [i2, i1];
+      const inserted = [
+        ...regular.slice(0, lo),
+        specialQuestions[0],
+        ...regular.slice(lo, hi),
+        specialQuestions[1],
+        ...regular.slice(hi)
+      ];
+      app.shuffledQuestions = inserted;
+      app.currentIndex = 0;
+      document.getElementById('progressText').textContent = `0 / ${inserted.length}`;
+      renderCurrentQuestion();
+      showScreen('test');
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => startTest(false));
+    document.getElementById('startPreviewBtn').addEventListener('click', () => startTest(true));
+    document.getElementById('backIntroBtn').addEventListener('click', () => {
+      if (confirm('返回首页将清空当前作答，确定吗？')) {
+        app.answers = {};
+        app.currentIndex = 0;
+        showScreen('intro');
+      }
+    });
+    prevBtn.addEventListener('click', () => {
+      if (app.currentIndex > 0) { app.currentIndex -= 1; renderCurrentQuestion(); }
+    });
+    nextBtn.addEventListener('click', () => {
+      if (app.currentIndex < app.shuffledQuestions.length - 1) { app.currentIndex += 1; renderCurrentQuestion(); }
+    });
+    document.getElementById('submitBtn').addEventListener('click', renderResult);
+    document.getElementById('restartBtn').addEventListener('click', () => startTest(app.previewMode));
+    document.getElementById('toTopBtn').addEventListener('click', () => showScreen('intro'));
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      const r = window._lastResult;
+      if (!r) return;
+      const text = `我导测出来是 ${r.finalType.code}（${r.finalType.cn}）\n标语：${r.finalType.intro}\n${r.badge}\n——TBTI 测出来的，仅供娱乐。`;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('结果文案已复制，可粘贴到聊天/朋友圈。');
+      }).catch(() => {
+        alert('复制失败，请手动复制。');
+      });
+    });
+  </script>
+</body>
+</html>
