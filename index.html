@@ -116,6 +116,20 @@
     details.author-box summary { cursor: pointer; font-weight: 600; color: var(--accent-strong); }
     details.author-box .author-content { margin-top: 10px; font-size: 14px; color: var(--muted); line-height: 1.8; }
 
+    .qr-mask { position: fixed; inset: 0; background: rgba(30, 24, 12, 0.55); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 1200; }
+    .qr-mask.visible { display: flex; }
+    .qr-dialog { background: var(--panel); border-radius: 20px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); width: min(360px, 100%); padding: 22px 22px 20px; text-align: center; position: relative; }
+    .qr-dialog h3 { font-size: 16px; color: var(--accent-strong); margin-bottom: 6px; }
+    .qr-dialog .qr-tip { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .qr-canvas { margin: 16px auto 12px; width: 240px; height: 240px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+    .qr-canvas img, .qr-canvas canvas { width: 100%; height: 100%; display: block; }
+    .qr-canvas .qr-loading { font-size: 13px; color: var(--muted); }
+    .qr-url { font-size: 12px; color: var(--muted); word-break: break-all; background: var(--soft); padding: 8px 10px; border-radius: 10px; line-height: 1.5; max-height: 70px; overflow: auto; }
+    .qr-actions { display: flex; gap: 10px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
+    .qr-actions button { padding: 10px 16px; font-size: 13px; border-radius: 10px; }
+    .qr-close { position: absolute; top: 10px; right: 12px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: 8px; }
+    .qr-close:hover { color: var(--accent-strong); background: var(--soft); }
+
     @media (max-width: 600px) {
       .hero { padding: 32px 20px; }
       .question-title { font-size: 15px; }
@@ -214,7 +228,8 @@
         <div class="result-actions">
           <button id="restartBtn" class="btn-secondary">重新测一次</button>
           <button id="toTopBtn" class="btn-primary">回到首页</button>
-          <button id="shareBtn" class="btn-primary">分享给朋友</button>
+          <button id="shareBtn" class="btn-primary">分享链接</button>
+          <button id="qrBtn" class="btn-primary">分享二维码</button>
           <button id="copyBtn" class="btn-secondary">复制结果文案</button>
         </div>
       </div>
@@ -222,6 +237,19 @@
 
   </div>
   <div class="toast" id="toast"></div>
+
+  <div class="qr-mask" id="qrMask" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="qr-dialog">
+      <button class="qr-close" id="qrCloseBtn" aria-label="关闭">×</button>
+      <h3 id="qrTitle">扫码查看这份 TBTI 报告</h3>
+      <p class="qr-tip">打开微信/相机扫一扫，把结果发给朋友</p>
+      <div class="qr-canvas" id="qrCanvas"><span class="qr-loading">生成中…</span></div>
+      <div class="qr-url" id="qrUrl"></div>
+      <div class="qr-actions">
+        <button id="qrCopyBtn" class="btn-secondary">复制链接</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const dimensionMeta = {
@@ -816,11 +844,13 @@
     function setShareMode(on) {
       const banner = document.getElementById('shareBanner');
       const shareBtn = document.getElementById('shareBtn');
+      const qrBtn = document.getElementById('qrBtn');
       const restartBtn = document.getElementById('restartBtn');
       const copyBtn = document.getElementById('copyBtn');
       banner.classList.toggle('visible', on);
       // On share-landing, hide redundant/confusing buttons
       shareBtn.style.display = on ? 'none' : '';
+      qrBtn.style.display = on ? 'none' : '';
       restartBtn.style.display = on ? 'none' : '';
       copyBtn.style.display = on ? 'none' : '';
     }
@@ -833,6 +863,67 @@
         : url;
       navigator.clipboard.writeText(text).then(() => {
         showToast('分享链接已复制，直接粘贴到聊天即可。');
+      }).catch(() => {
+        prompt('复制失败，请手动复制：', url);
+      });
+    });
+
+    let qrLibPromise = null;
+    function loadQrLib() {
+      if (window.QRCode) return Promise.resolve();
+      if (qrLibPromise) return qrLibPromise;
+      qrLibPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'qrcode.min.js';
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => { qrLibPromise = null; reject(new Error('qr lib load failed')); };
+        document.head.appendChild(s);
+      });
+      return qrLibPromise;
+    }
+
+    function openQrDialog(url) {
+      const mask = document.getElementById('qrMask');
+      const canvas = document.getElementById('qrCanvas');
+      const urlBox = document.getElementById('qrUrl');
+      canvas.innerHTML = '<span class="qr-loading">生成中…</span>';
+      urlBox.textContent = url;
+      mask.classList.add('visible');
+      loadQrLib().then(() => {
+        canvas.innerHTML = '';
+        new QRCode(canvas, {
+          text: url,
+          width: 220,
+          height: 220,
+          colorDark: '#1f2420',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }).catch(() => {
+        const fallback = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(url);
+        canvas.innerHTML = '<img alt="二维码" src="' + fallback + '" />';
+      });
+    }
+
+    function closeQrDialog() {
+      document.getElementById('qrMask').classList.remove('visible');
+    }
+
+    document.getElementById('qrBtn').addEventListener('click', () => {
+      openQrDialog(buildShareUrl(app.answers));
+    });
+    document.getElementById('qrCloseBtn').addEventListener('click', closeQrDialog);
+    document.getElementById('qrMask').addEventListener('click', (e) => {
+      if (e.target.id === 'qrMask') closeQrDialog();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeQrDialog();
+    });
+    document.getElementById('qrCopyBtn').addEventListener('click', () => {
+      const url = document.getElementById('qrUrl').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('链接已复制');
       }).catch(() => {
         prompt('复制失败，请手动复制：', url);
       });
